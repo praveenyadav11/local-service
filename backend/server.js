@@ -4,7 +4,8 @@ const connectDB = require('./config/db');
 
 const healthRoutes = require('./routes/healthRoutes');
 const authRoutes = require('./routes/authRoutes');
-
+const categoryRoutes = require('./routes/categoryRoutes');
+const providerRoutes = require('./routes/providerRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 connectDB();
 const app = express();
@@ -20,7 +21,8 @@ app.get('/', (req, res) => {
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
-
+app.use('/api/categories', categoryRoutes);
+app.use('/api/providers', providerRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
