@@ -199,6 +199,8 @@ const getNearbyProviders = asyncHandler(async (req, res) => {
         hourlyRate: 1,
         city: 1,
         isVerified: 1,
+        ratingAverage: 1,
+        ratingCount: 1,
         distanceKm: { $round: [{ $divide: ['$distanceMeters', 1000] }, 2] },
       },
     },
