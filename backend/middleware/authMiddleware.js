@@ -24,6 +24,9 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new AppError('Not authorized, user no longer exists', 401);
   }
 
+    if (user.isActive === false) {
+    throw new AppError('Your account has been deactivated', 403);
+  }
   req.user = user;
   next();
 });

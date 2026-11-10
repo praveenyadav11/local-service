@@ -63,6 +63,9 @@ const login = asyncHandler(async (req, res) => {
   if (!user || !(await user.matchPassword(password))) {
     throw new AppError('Invalid credentials', 401);
   }
+    if (user.isActive === false) {
+    throw new AppError('Your account has been deactivated', 403);
+  }
 
   const token = generateToken(user._id, user.role);
 

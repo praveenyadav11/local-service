@@ -36,6 +36,35 @@ const providerProfileSchema = new mongoose.Schema(
       trim: true,
       maxlength: [60, 'City cannot exceed 60 characters'],
     },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+      },
+      coordinates: {
+        type: [Number],
+        default: undefined,
+        validate: {
+          validator: (c) =>
+            c === undefined ||
+            (c.length === 2 &&
+              c[0] >= -180 && c[0] <= 180 &&
+              c[1] >= -90 && c[1] <= 90),
+          message: 'coordinates must be [longitude, latitude]',
+        },
+      },
+    },
+        ratingAverage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    ratingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     isVerified: {
       type: Boolean,
       default: false,
@@ -43,5 +72,7 @@ const providerProfileSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+providerProfileSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('ProviderProfile', providerProfileSchema);
