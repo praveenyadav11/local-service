@@ -5,7 +5,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
-
 const healthRoutes = require('./routes/healthRoutes');
 const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -16,7 +15,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-
+const allowedOrigins = require('./config/origins');
 const app = express();
 
 app.set('trust proxy', 1);
@@ -27,6 +26,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use(cors({ origin: allowedOrigins }));
 
 app.get('/', (req, res) => {
   res.status(200).json({ success: true, message: 'ServiceConnect API is running' });
