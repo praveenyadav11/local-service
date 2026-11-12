@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle, Loader2, Lock, LogIn, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../components/AuthLayout";
+import FormField from "../components/FormField";
 
 function Login() {
   const { login } = useAuth();
@@ -17,55 +20,81 @@ function Login() {
     setError("");
     setSubmitting(true);
     try {
-      await login(form.email, form.password);
+      await login(form.email.trim(), form.password);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(
+        err.response?.data?.message || "Login failed. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-white p-6 rounded-lg shadow space-y-4"
-      >
-        <h1 className="text-2xl font-bold text-center">Login</h1>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <input
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Log in to manage your bookings and requests."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+          </div>
+        )}
+
+        <FormField
+          label="Email"
+          icon={Mail}
           name="email"
           type="email"
-          placeholder="Email"
+          placeholder="you@example.com"
+          autoComplete="email"
           value={form.email}
           onChange={handleChange}
           required
-          className="w-full border rounded px-3 py-2"
         />
-        <input
+        <FormField
+          label="Password"
+          icon={Lock}
           name="password"
           type="password"
-          placeholder="Password"
+          placeholder="Enter your password"
+          autoComplete="current-password"
           value={form.password}
           onChange={handleChange}
           required
-          className="w-full border rounded px-3 py-2"
         />
+
         <button
           disabled={submitting}
-          className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? "Logging in..." : "Login"}
+          {submitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Logging in...
+            </>
+          ) : (
+            <>
+              <LogIn className="h-4 w-4" /> Log in
+            </>
+          )}
         </button>
-        <p className="text-sm text-center">
-          No account?{" "}
-          <Link to="/register" className="text-blue-600">
-            Register
-          </Link>
-        </p>
       </form>
-    </div>
+
+      <p className="text-center text-sm text-slate-600">
+        New to ServiceConnect?{" "}
+        <Link
+          to="/register"
+          className="font-semibold text-indigo-600 hover:text-indigo-700"
+        >
+          Create an account
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
 

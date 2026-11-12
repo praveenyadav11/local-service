@@ -94,4 +94,28 @@ const getMe = asyncHandler(async (req, res) => {
     },
   });
 });
-module.exports = { register, login, getMe };
+
+// @desc    Change own password
+// @route   PUT /api/auth/password
+// @access  Private
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    throw new AppError('currentPassword and newPassword are required', 400);
+  }
+  if (newPassword.length < 6) {
+    throw new AppError('New password must be at least 6 characters', 400);
+  }
+
+  const user = await User.findById(req.user._id).select('+password');
+  if (!(await user.matchPassword(currentPassword))) {
+    throw new AppError('Current password is incorrect', 401);
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({ success: true, message: 'Password updated' });
+});
+module.exports = { register, login, getMe, changePassword };

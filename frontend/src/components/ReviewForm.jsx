@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { Loader2, Star } from "lucide-react";
 import api from "../api/axios";
+
+const LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
 
 function ReviewForm({ bookingId, onDone }) {
   const [rating, setRating] = useState(5);
+  const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -12,12 +16,8 @@ function ReviewForm({ bookingId, onDone }) {
     setError("");
     setSubmitting(true);
     try {
-      await api.post("/reviews", {
-        bookingId,
-        rating: Number(rating),
-        comment,
-      });
-      onDone();
+      await api.post("/reviews", { bookingId, rating, comment });
+      onDone(true);
     } catch (err) {
       setError(err.response?.data?.message || "Could not submit review");
     } finally {
@@ -25,43 +25,59 @@ function ReviewForm({ bookingId, onDone }) {
     }
   };
 
+  const shown = hover || rating;
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full border-t pt-3 mt-2 space-y-2"
+      className="w-full space-y-3 rounded-xl border border-slate-200 bg-white p-4"
     >
-      <select
-        value={rating}
-        onChange={(e) => setRating(e.target.value)}
-        className="border rounded px-2 py-1"
-      >
-        {[5, 4, 3, 2, 1].map((n) => (
-          <option key={n} value={n}>
-            {"★".repeat(n)} ({n})
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-3">
+        <div className="flex" onMouseLeave={() => setHover(0)}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              type="button"
+              key={n}
+              onMouseEnter={() => setHover(n)}
+              onClick={() => setRating(n)}
+              aria-label={`${n} stars`}
+              className="p-0.5"
+            >
+              <Star
+                className={`h-7 w-7 transition ${
+                  n <= shown
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-slate-300"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+        <span className="text-sm font-semibold text-slate-600">
+          {LABELS[shown]}
+        </span>
+      </div>
+
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Comment (optional)"
+        placeholder="Share your experience (optional)"
         maxLength={500}
-        className="w-full border rounded px-3 py-2 text-sm"
+        rows={3}
+        className="input"
       />
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
       <div className="flex gap-2">
-        <button
-          disabled={submitting}
-          className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
-        >
-          Submit review
+        <button disabled={submitting} className="btn-primary gap-2">
+          {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Submit
+          review
         </button>
         <button
           type="button"
-          onClick={onDone}
-          className="text-sm text-slate-600"
+          onClick={() => onDone(false)}
+          className="btn-secondary"
         >
-          Close
+          Cancel
         </button>
       </div>
     </form>

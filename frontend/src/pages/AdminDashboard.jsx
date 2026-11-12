@@ -1,230 +1,448 @@
-import { useEffect, useState, useCallback } from "react";
-import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import { useCallback, useEffect, useState } from 'react';
+import {
+  BadgeCheck, CalendarDays, IndianRupee, Loader2, ShieldCheck, ShieldOff,
+  Trophy, UserCheck, UserX, Users, Wrench, CalendarCheck, Star, SearchX,
+} from 'lucide-react';
+import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import StatTile from '../components/StatTile';
+import EmptyState from '../components/EmptyState';
+import Pagination from '../components/Pagination';
 
-function StatCard({ label, value }) {
+const STATUS_COLORS = {
+  pending: { bar: 'bg-amber-400', dot: 'bg-amber-400' },
+  confirmed: { bar: 'bg-sky-500', dot: 'bg-sky-500' },
+  completed: { bar: 'bg-emerald-500', dot: 'bg-emerald-500' },
+  rejected: { bar: 'bg-red-400', dot: 'bg-red-400' },
+  cancelled: { bar: 'bg-slate-300', dot: 'bg-slate-300' },
+};
+
+const ROLE_TABS = [
+  { value: '', label: 'All' },
+  { value: 'customer', label: 'Customers' },
+  { value: 'provider', label: 'Providers' },
+  { value: 'admin', label: 'Admins' },
+];
+
+const ROLE_BADGE = {
+  customer: 'bg-sky-50 text-sky-700',
+  provider: 'bg-violet-50 text-violet-700',
+  admin: 'bg-indigo-50 text-indigo-700',
+};
+
+const formatJoined = (iso) =>
+  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function Card({ title, icon: Icon, children, action }) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-base font-bold text-[#172033]">
+          {Icon && <Icon className="h-5 w-5 text-indigo-600" />} {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
   );
 }
 
 function AdminDashboard() {
   const { user: me } = useAuth();
+
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [providerId, setProviderId] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [usersLoading, setUsersLoading] = useState(true);
+
+  const [providers, setProviders] = useState([]);
+  const [provPage, setProvPage] = useState(1);
+  const [provPages, setProvPages] = useState(1);
+  const [provLoading, setProvLoading] = useState(true);
+  const [busyId, setBusyId] = useState('');
+
+  const [providerId, setProviderId] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const loadAnalytics = useCallback(() => {
     api
-      .get("/admin/analytics")
+      .get('/admin/analytics')
       .then((res) => setAnalytics(res.data))
-      .catch((err) =>
-        setError(err.response?.data?.message || "Failed to load analytics"),
-      );
+      .catch((err) => setError(err.response?.data?.message || 'Failed to load analytics'));
   }, []);
 
   const loadUsers = useCallback(() => {
-    const params = { page, limit: 10 };
+    setUsersLoading(true);
+    const params = { page, limit: 8 };
     if (role) params.role = role;
     api
-      .get("/admin/users", { params })
+      .get('/admin/users', { params })
       .then((res) => {
         setUsers(res.data.users);
         setPages(res.data.pages || 1);
       })
-      .catch((err) =>
-        setError(err.response?.data?.message || "Failed to load users"),
-      );
+      .catch((err) => setError(err.response?.data?.message || 'Failed to load users'))
+      .finally(() => setUsersLoading(false));
   }, [page, role]);
+
+  const loadProviders = useCallback(() => {
+    setProvLoading(true);
+    api
+      .get('/providers', { params: { page: provPage, limit: 5 } })
+      .then((res) => {
+        setProviders(res.data.providers);
+        setProvPages(res.data.pages || 1);
+      })
+      .catch(() => {})
+      .finally(() => setProvLoading(false));
+  }, [provPage]);
 
   useEffect(loadAnalytics, [loadAnalytics]);
   useEffect(loadUsers, [loadUsers]);
+  useEffect(loadProviders, [loadProviders]);
 
   const toggleActive = async (u) => {
-    setError("");
+    const deactivating = u.isActive !== false;
+    if (deactivating && !window.confirm(`Deactivate ${u.name}? They will be unable to log in.`)) return;
+    setError('');
     try {
-      await api.patch(`/admin/users/${u._id}/active`, {
-        isActive: u.isActive === false,
-      });
+      await api.patch(`/admin/users/${u._id}/active`, { isActive: !deactivating });
       loadUsers();
     } catch (err) {
-      setError(err.response?.data?.message || "Could not update user");
+      setError(err.response?.data?.message || 'Could not update user');
     }
   };
 
-  const setVerified = async (isVerified) => {
-    setError("");
-    setMessage("");
+  const setVerified = async (id, isVerified) => {
+    setError('');
+    setMessage('');
+    setBusyId(id);
     try {
-      await api.patch(`/admin/providers/${providerId.trim()}/verify`, {
-        isVerified,
-      });
-      setMessage(`Provider ${isVerified ? "verified" : "unverified"}`);
+      await api.patch(`/admin/providers/${id}/verify`, { isVerified });
+      setMessage(`Provider ${isVerified ? 'verified' : 'unverified'}`);
+      setProviders((prev) => prev.map((p) => (p._id === id ? { ...p, isVerified } : p)));
       loadAnalytics();
     } catch (err) {
-      setError(err.response?.data?.message || "Could not update provider");
+      setError(err.response?.data?.message || 'Could not update provider');
+    } finally {
+      setBusyId('');
     }
   };
 
   const o = analytics?.overview;
+  const statusEntries = o ? Object.entries(o.bookings.byStatus) : [];
+  const statusTotal = statusEntries.reduce((s, [, c]) => s + c, 0) || 1;
+  const perDay = analytics?.bookingsPerDay || [];
+  const maxDay = Math.max(1, ...perDay.map((d) => d.count));
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      <div>
+        <h1 className="text-3xl font-extrabold text-[#172033]">Admin dashboard</h1>
+        <p className="mt-1 text-slate-500">Platform overview, user management and provider verification.</p>
+      </div>
 
-      {o && (
-        <>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Users" value={o.users.total} />
-            <StatCard
-              label="Providers (verified)"
-              value={`${o.providers.total} (${o.providers.verified})`}
-            />
-            <StatCard label="Bookings" value={o.bookings.total} />
-            <StatCard label="Revenue" value={`₹${o.revenue.total}`} />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold mb-2">Bookings by status</h2>
-              {Object.entries(o.bookings.byStatus).map(([s, c]) => (
-                <p key={s} className="text-sm flex justify-between">
-                  <span>{s}</span>
-                  <span>{c}</span>
-                </p>
-              ))}
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold mb-2">Top providers</h2>
-              {analytics.topProviders.length === 0 && (
-                <p className="text-sm text-slate-500">
-                  No completed bookings yet.
-                </p>
-              )}
-              {analytics.topProviders.map((p) => (
-                <p key={p._id} className="text-sm flex justify-between">
-                  <span>
-                    {p.name} ({p.city})
-                  </span>
-                  <span>{p.completedBookings}</span>
-                </p>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="font-semibold mb-2">Bookings per day</h2>
-            {analytics.bookingsPerDay.length === 0 && (
-              <p className="text-sm text-slate-500">No recent bookings.</p>
-            )}
-            {analytics.bookingsPerDay.map((d) => (
-              <div key={d.date} className="flex items-center gap-2 text-sm">
-                <span className="w-24">{d.date}</span>
-                <div
-                  className="bg-blue-500 h-3 rounded"
-                  style={{ width: `${d.count * 24}px` }}
-                />
-                <span>{d.count}</span>
-              </div>
-            ))}
-          </div>
-        </>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          {message}
+        </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-4 space-y-2">
-        <h2 className="font-semibold">Provider verification</h2>
-        <input
-          value={providerId}
-          onChange={(e) => setProviderId(e.target.value)}
-          placeholder="Provider profile id"
-          className="w-full border rounded px-3 py-2"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={() => setVerified(true)}
-            className="bg-green-600 text-white px-3 py-1 rounded"
-          >
-            Verify
-          </button>
-          <button
-            onClick={() => setVerified(false)}
-            className="bg-slate-600 text-white px-3 py-1 rounded"
-          >
-            Unverify
-          </button>
+      {/* KPI tiles */}
+      {!o ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="h-20 animate-pulse rounded-2xl bg-slate-200" />
+          ))}
         </div>
-        {message && <p className="text-green-600 text-sm">{message}</p>}
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Users</h2>
-          <select
-            value={role}
-            onChange={(e) => {
-              setPage(1);
-              setRole(e.target.value);
-            }}
-            className="border rounded px-2 py-1"
-          >
-            <option value="">All roles</option>
-            <option value="customer">Customers</option>
-            <option value="provider">Providers</option>
-            <option value="admin">Admins</option>
-          </select>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatTile
+            icon={Users}
+            label="Total users"
+            value={o.users.total}
+            tone="bg-indigo-50 text-indigo-600"
+            hint={`${o.users.byRole.customer || 0} customers`}
+          />
+          <StatTile
+            icon={Wrench}
+            label="Providers"
+            value={o.providers.total}
+            tone="bg-violet-50 text-violet-600"
+            hint={`${o.providers.verified} verified`}
+          />
+          <StatTile
+            icon={CalendarCheck}
+            label="Total bookings"
+            value={o.bookings.total}
+            tone="bg-sky-50 text-sky-600"
+          />
+          <StatTile
+            icon={IndianRupee}
+            label="Revenue"
+            value={`₹${o.revenue.total}`}
+            tone="bg-emerald-50 text-emerald-600"
+            hint={`${o.revenue.payments} payments`}
+          />
         </div>
+      )}
 
-        {users.map((u) => (
-          <div
-            key={u._id}
-            className="flex items-center justify-between border-t pt-2 text-sm"
-          >
-            <div>
-              <p className="font-medium">
-                {u.name} <span className="text-slate-500">({u.role})</span>
-              </p>
-              <p className="text-slate-500">{u.email}</p>
-            </div>
-            {u._id !== me.id && (
-              <button
-                onClick={() => toggleActive(u)}
-                className={`${u.isActive === false ? "bg-green-600" : "bg-red-600"} text-white px-3 py-1 rounded`}
-              >
-                {u.isActive === false ? "Activate" : "Deactivate"}
-              </button>
+      {o && (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Bookings by status */}
+          <Card title="Bookings by status" icon={CalendarDays}>
+            {statusEntries.length === 0 ? (
+              <p className="text-sm text-slate-500">No bookings yet.</p>
+            ) : (
+              <>
+                <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+                  {statusEntries.map(([s, c]) => (
+                    <div
+                      key={s}
+                      className={STATUS_COLORS[s]?.bar || 'bg-slate-300'}
+                      style={{ width: `${(c / statusTotal) * 100}%` }}
+                      title={`${s}: ${c}`}
+                    />
+                  ))}
+                </div>
+                <ul className="mt-4 space-y-2.5">
+                  {statusEntries.map(([s, c]) => (
+                    <li key={s} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 capitalize text-slate-600">
+                        <span className={`h-2.5 w-2.5 rounded-full ${STATUS_COLORS[s]?.dot || 'bg-slate-300'}`} />
+                        {s}
+                      </span>
+                      <span className="font-bold text-[#172033]">{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
-          </div>
-        ))}
+          </Card>
 
-        <div className="flex items-center gap-3">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="text-sm">
-            Page {page} of {pages}
-          </span>
-          <button
-            disabled={page >= pages}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Next
-          </button>
+          {/* Bookings per day */}
+          <Card title="Bookings per day" icon={CalendarDays}>
+            {perDay.length === 0 ? (
+              <p className="text-sm text-slate-500">No bookings in the last 14 days.</p>
+            ) : (
+              <div className="flex h-44 items-end gap-2 overflow-x-auto pb-1">
+                {perDay.map((d) => (
+                  <div key={d.date} className="flex h-full min-w-8 flex-1 flex-col items-center justify-end gap-1">
+                    <span className="text-xs font-bold text-[#172033]">{d.count}</span>
+                    <div
+                      className="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500"
+                      style={{ height: `${(d.count / maxDay) * 100}%`, minHeight: '4px' }}
+                      title={`${d.date}: ${d.count}`}
+                    />
+                    <span className="text-[10px] text-slate-400">{d.date.slice(5)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Top providers */}
+          <Card title="Top providers" icon={Trophy}>
+            {analytics.topProviders.length === 0 ? (
+              <p className="text-sm text-slate-500">No completed bookings yet.</p>
+            ) : (
+              <ol className="space-y-3">
+                {analytics.topProviders.map((p, i) => (
+                  <li key={p._id} className="flex items-center gap-3">
+                    <span
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-extrabold ${
+                        i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[#172033]">{p.name}</p>
+                      <p className="flex items-center gap-1 text-xs text-slate-500">
+                        {p.city}
+                        {p.ratingCount > 0 && (
+                          <>
+                            <span>·</span>
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {p.ratingAverage}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-indigo-600">{p.completedBookings} jobs</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
         </div>
-      </div>
+      )}
+
+      {/* Provider verification */}
+      <Card title="Provider verification" icon={ShieldCheck}>
+        {provLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-14 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : providers.length === 0 ? (
+          <p className="text-sm text-slate-500">No provider profiles yet.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {providers.map((p) => (
+              <li key={p._id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-indigo-100 font-bold text-indigo-700">
+                    {p.user?.name?.[0]?.toUpperCase()}
+                  </span>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-[#172033]">
+                      {p.user?.name}
+                      {p.isVerified && <BadgeCheck className="h-4 w-4 fill-indigo-600 text-white" />}
+                    </p>
+                    <p className="text-xs capitalize text-slate-500">
+                      {p.category?.name} · {p.city}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  disabled={busyId === p._id}
+                  onClick={() => setVerified(p._id, !p.isVerified)}
+                  className={p.isVerified ? 'btn-secondary gap-1.5' : 'btn-primary gap-1.5'}
+                >
+                  {busyId === p._id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : p.isVerified ? (
+                    <ShieldOff className="h-4 w-4" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4" />
+                  )}
+                  {p.isVerified ? 'Unverify' : 'Verify'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-4">
+          <Pagination page={provPage} pages={provPages} onChange={setProvPage} />
+        </div>
+
+        <details className="mt-4 rounded-xl bg-slate-50 p-3 text-sm">
+          <summary className="cursor-pointer font-semibold text-slate-600">Verify by provider profile ID</summary>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input
+              value={providerId}
+              onChange={(e) => setProviderId(e.target.value)}
+              placeholder="Provider profile id"
+              className="input flex-1"
+            />
+            <button disabled={!providerId.trim()} onClick={() => setVerified(providerId.trim(), true)} className="btn-primary">
+              Verify
+            </button>
+            <button disabled={!providerId.trim()} onClick={() => setVerified(providerId.trim(), false)} className="btn-secondary">
+              Unverify
+            </button>
+          </div>
+        </details>
+      </Card>
+
+      {/* Users */}
+      <Card title="Users" icon={Users}>
+        <div className="mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+          {ROLE_TABS.map((t) => {
+            const count = t.value ? o?.users.byRole[t.value] : o?.users.total;
+            return (
+              <button
+                key={t.value}
+                onClick={() => {
+                  setPage(1);
+                  setRole(t.value);
+                }}
+                className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  role === t.value
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
+                }`}
+              >
+                {t.label}
+                {count !== undefined && <span className="ml-1.5 opacity-75">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {usersLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : users.length === 0 ? (
+          <EmptyState icon={SearchX} title="No users found" text="There are no users with this role yet." />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {users.map((u) => {
+              const inactive = u.isActive === false;
+              const isMe = u._id === me?.id;
+              return (
+                <li key={u._id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-indigo-100 font-bold text-indigo-700">
+                      {u.name?.[0]?.toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-[#172033]">
+                        {u.name}
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold capitalize ${ROLE_BADGE[u.role]}`}>
+                          {u.role}
+                        </span>
+                        {inactive && (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700">
+                            Deactivated
+                          </span>
+                        )}
+                        {isMe && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                            You
+                          </span>
+                        )}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {u.email} · Joined {formatJoined(u.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!isMe && (
+                    <button
+                      onClick={() => toggleActive(u)}
+                      className={inactive ? 'btn-primary gap-1.5' : 'btn-secondary gap-1.5 hover:!border-red-300 hover:!bg-red-50 hover:!text-red-700'}
+                    >
+                      {inactive ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
+                      {inactive ? 'Activate' : 'Deactivate'}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {!usersLoading && users.length > 0 && (
+          <div className="mt-4">
+            <Pagination page={page} pages={pages} onChange={setPage} />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

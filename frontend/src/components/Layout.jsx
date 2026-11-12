@@ -3,11 +3,15 @@ import Navbar from "./Navbar";
 
 function Layout() {
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="max-w-5xl mx-auto p-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
+      <footer className="border-t border-slate-200 bg-white py-6 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} ServiceConnect. Book trusted local
+        services.
+      </footer>
     </div>
   );
 }

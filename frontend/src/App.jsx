@@ -1,4 +1,3 @@
-import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Home from "./pages/Home";
@@ -11,6 +10,9 @@ import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderProfile from "./pages/ProviderProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProviderAvailability from "./pages/ProviderAvailability";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Settings from "./pages/Settings";
+
 function App() {
   return (
     <Routes>
@@ -37,6 +39,14 @@ function App() {
 
         <Route element={<ProtectedRoute roles={["admin"]} />}>
           <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/change-password"
+            element={<Navigate to="/settings" replace />}
+          />
         </Route>
       </Route>
     </Routes>

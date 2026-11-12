@@ -8,6 +8,9 @@ const User = require('../models/User');
 const { emitToUser } = require('../sockets');
 const { isValidDateString, generateSlots } = require('../services/slotService');
 const { notifyUser } = require('../services/notificationService');
+const Payment = require('../models/Payment');
+
+
 // @desc    Create a booking
 // @route   POST /api/bookings
 // @access  Customer
@@ -143,8 +146,31 @@ const getProviderBookings = asyncHandler(async (req, res) => {
   }
 
   filter.provider = profile._id;
-  await sendList(res, filter, page, limit);
-});
+  const total = await Booking.countDocuments(filter);
+  const bookings = await Booking.find(filter)
+    .populate('customer', 'name')
+    .sort({ date: -1, startTime: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+
+  const payments = await Payment.find({ booking: { $in: bookings.map((b) => b._id) } })
+    .select('booking method status');
+  const byBooking = new Map(payments.map((p) => [p.booking.toString(), p]));
+
+  const withPayment = bookings.map((b) => {
+    const p = byBooking.get(b._id.toString());
+    return { ...b, payment: p ? { method: p.method, status: p.status } : null };
+  });
+
+  res.status(200).json({
+    success: true,
+    count: withPayment.length,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    bookings: withPayment,
+  });});
 
 // @desc    Get one booking
 // @route   GET /api/bookings/:id

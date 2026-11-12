@@ -29,18 +29,23 @@ const paymentSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ['card', 'upi', 'netbanking', 'cash'],
-      required: [true, 'Payment method is required'],
+      enum: ['upi', 'card', 'netbanking', 'wallet', 'cash'],
+      default: 'upi',
     },
     status: {
       type: String,
-      enum: ['paid', 'refunded'],
-      default: 'paid',
+      enum: ['created', 'paid', 'refunded'],
+      default: 'created',
     },
     transactionId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+    },
+    razorpayOrderId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   { timestamps: true }

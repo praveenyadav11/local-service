@@ -21,7 +21,7 @@ function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded border z-10">
+        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl z-10">
           <div className="flex items-center justify-between px-3 py-2 border-b">
             <span className="font-semibold text-sm">Notifications</span>
             {unreadCount > 0 && (
@@ -37,7 +37,7 @@ function NotificationBell() {
               {notifications.map((n) => (
                 <li
                   key={n._id}
-                  className={`px-3 py-2 text-sm border-b ${n.isRead ? "" : "bg-blue-50"}`}
+                  className={`px-3 py-2 text-sm border-b border-slate-100 text-slate-700 ${n.isRead ? "" : "bg-brand-50"}`}
                 >
                   {n.message}
                 </li>
