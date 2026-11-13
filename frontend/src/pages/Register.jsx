@@ -10,6 +10,7 @@ import {
   User,
   UserPlus,
   Wrench,
+  Phone
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
@@ -51,6 +52,7 @@ function Register() {
     email: "",
     password: "",
     role: "customer",
+    phone:"",
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -157,6 +159,18 @@ function Register() {
           onChange={handleChange}
           required
         />
+        <FormField
+          label="Mobile number"
+          icon={Phone}
+          name="phone"
+          type="tel"
+          inputMode="numeric"
+          placeholder="9876543210"
+          value={form.phone}
+          onChange={handleChange}
+          required
+        />
+
         <FormField
           label="Password"
           icon={Lock}

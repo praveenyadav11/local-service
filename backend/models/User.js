@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema(
       enum: ['customer', 'provider', 'admin'],
       default: 'customer',
     },
+        phone: {
+      type: String,
+      trim: true,
+      match: [/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'],
+    },
         isActive: {
       type: Boolean,
       default: true,

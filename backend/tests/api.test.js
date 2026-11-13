@@ -154,8 +154,10 @@ test('double booking: two simultaneous requests for one slot give one 201 and on
     provider: profile._id, workingDays: [0, 1, 2, 3, 4, 5, 6], startHour: 9, endHour: 17,
   });
 
-  const c1 = await User.create({ name: 'C1', email: 'c1@test.com', password: 'secret123' });
-  const c2 = await User.create({ name: 'C2', email: 'c2@test.com', password: 'secret123' });
+  const c1 = await User.create({ name: 'C1', email: 'c1@test.com', password: 'secret123', phone: '9876543210' });
+  const c2 = await User.create({ name: 'C2', email: 'c2@test.com', password: 'secret123', phone: '9876543211' });
+
+
   const t1 = generateToken(c1._id, c1.role);
   const t2 = generateToken(c2._id, c2.role);
 

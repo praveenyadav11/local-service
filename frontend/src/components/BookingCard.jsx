@@ -9,7 +9,7 @@ import {
   BadgeCheck,
   Ban,
 } from "lucide-react";
-
+import ContactActions from "./ContactActions";
 const STATUS = {
   pending: {
     label: "Pending",
@@ -66,6 +66,7 @@ const formatDate = (str) => {
   });
 };
 
+
 function BookingCard({ booking, role, onStatusChange, busy, children }) {
   const actions = [];
 
@@ -112,6 +113,11 @@ function BookingCard({ booking, role, onStatusChange, busy, children }) {
   const st = STATUS[booking.status] || STATUS.pending;
   const StatusIcon = st.icon;
   const hasFooter = actions.length > 0 || children;
+  const contactPhone =
+    role === "customer"
+      ? booking.provider?.user?.phone
+      : booking.customer?.phone;
+
 
   return (
     <article className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
@@ -158,6 +164,19 @@ function BookingCard({ booking, role, onStatusChange, busy, children }) {
             </p>
           )}
         </div>
+
+        {contactPhone ? (
+          <div className="mt-4">
+            <ContactActions phone={contactPhone} name={who} />
+          </div>
+        ) : (
+          booking.status === "pending" && (
+            <p className="mt-4 text-xs text-slate-400">
+              Contact details are shared once the booking is confirmed.
+            </p>
+          )
+        )}
+
       </div>
 
       {hasFooter && (

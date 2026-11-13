@@ -2,14 +2,14 @@ const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../middleware/asyncHandler');
 const generateToken = require('../utils/generateToken');
-
+const normalizePhone = require('../utils/phone');
 const ALLOWED_SIGNUP_ROLES = ['customer', 'provider'];
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, phone } = req.body;
 
   if (!name || !email || !password) {
     throw new AppError('Name, email and password are required', 400);
@@ -28,7 +28,7 @@ const register = asyncHandler(async (req, res) => {
     throw new AppError('Email already registered', 409);
   }
 
-  const user = await User.create({ name, email, password, role });
+  const user = await User.create({ name, email, password, role, phone: normalizePhone(phone) });
 
   const token = generateToken(user._id, user.role);
 
@@ -40,6 +40,7 @@ const register = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone:user.phone,
     },
   });
 });
@@ -77,6 +78,7 @@ const login = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone:user.phone,
     },
   });
 });
@@ -91,6 +93,7 @@ const getMe = asyncHandler(async (req, res) => {
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
+      phone:req.user.phone,
     },
   });
 });
@@ -118,4 +121,29 @@ const changePassword = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, message: 'Password updated' });
 });
-module.exports = { register, login, getMe, changePassword };
+
+
+// @desc    Update own name and phone
+// @route   PUT /api/auth/me
+// @access  Private
+const updateMe = asyncHandler(async (req, res) => {
+  const { name, phone } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) {
+      throw new AppError('Name cannot be empty', 400);
+    }
+    user.name = name.trim();
+  }
+  if (phone !== undefined) user.phone = normalizePhone(phone);
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone },
+  });
+});
+
+module.exports = { register, login, getMe, changePassword, updateMe };

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  ArrowRight,
   BadgeCheck,
   Banknote,
   CalendarClock,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   Inbox,
   ListChecks,
+  Phone,
   Star,
   UserCog,
 } from "lucide-react";
@@ -88,6 +90,27 @@ function ProviderDashboard() {
     return null;
   };
 
+  const phoneBanner = !user?.phone && (
+    <Link
+      to="/settings"
+      className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 transition hover:bg-amber-100"
+    >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+        <Phone className="h-5 w-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-[#172033]">Add your phone number</p>
+        <p className="text-sm text-slate-600">
+          You need it to confirm bookings. It is shared with the customer only
+          after you confirm.
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-800">
+        Open settings <ArrowRight className="h-4 w-4" />
+      </span>
+    </Link>
+  );
+
   const header = (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-2xl font-extrabold text-white shadow">
@@ -112,8 +135,15 @@ function ProviderDashboard() {
           )}
         </div>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-slate-500">
-          {profile?.category?.name && <span>{profile.category.name}</span>}
+          {profile?.category?.name && (
+            <span className="capitalize">{profile.category.name}</span>
+          )}
           {profile && <span>₹{profile.hourlyRate}/hr</span>}
+          {user?.phone && (
+            <span className="inline-flex items-center gap-1">
+              <Phone className="h-3.5 w-3.5" /> +91 {user.phone}
+            </span>
+          )}
           {profile?.ratingCount > 0 ? (
             <span className="inline-flex items-center gap-1">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -163,6 +193,9 @@ function ProviderDashboard() {
           {msg}
         </div>
       )}
+
+      {phoneBanner}
+
       {profileMissing ? (
         setupCard
       ) : (

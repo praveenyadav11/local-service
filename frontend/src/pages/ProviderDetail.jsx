@@ -12,6 +12,7 @@ import {
   LogIn,
   MapPin,
   MessageSquare,
+  Phone,
   ShieldCheck,
   Star,
   UserX,
@@ -269,6 +270,9 @@ function ProviderDetail() {
               <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5">
                 <Clock className="h-4 w-4" /> One-hour slots
               </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5">
+                <Phone className="h-4 w-4" /> Contact shared after confirmation
+              </span>
             </div>
           </section>
 
@@ -444,6 +448,14 @@ function ProviderDetail() {
               <UserX className="h-4 w-4 shrink-0" /> Only customer accounts can
               book services.
             </div>
+          ) : !user.phone ? (
+            <Link
+              to="/settings"
+              className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+            >
+              <Phone className="h-4 w-4 shrink-0" /> Add your phone number in
+              Settings to book a service
+            </Link>
           ) : (
             selected && (
               <form onSubmit={handleBook} className="space-y-3">

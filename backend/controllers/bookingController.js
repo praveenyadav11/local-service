@@ -9,7 +9,7 @@ const { emitToUser } = require('../sockets');
 const { isValidDateString, generateSlots } = require('../services/slotService');
 const { notifyUser } = require('../services/notificationService');
 const Payment = require('../models/Payment');
-
+const { maskContacts } = require('../utils/contact');
 
 // @desc    Create a booking
 // @route   POST /api/bookings
@@ -31,6 +31,10 @@ const createBooking = asyncHandler(async (req, res) => {
   }
   if (notes !== undefined && typeof notes !== 'string') {
     throw new AppError('Invalid notes', 400);
+  }
+
+    if (!req.user.phone) {
+    throw new AppError('Please add your phone number in Settings before booking', 400);
   }
 
   const provider = await ProviderProfile.findById(providerId);
@@ -99,15 +103,15 @@ const buildListOptions = (query) => {
   return { page, limit, filter };
 };
 
-const sendList = async (res, filter, page, limit) => {
+const sendList = async (res, filter, page, limit, viewer) => {
   const total = await Booking.countDocuments(filter);
   const bookings = await Booking.find(filter)
-    .populate('customer', 'name')
+    .populate('customer', 'name phone')
     .populate({
       path: 'provider',
       select: 'city hourlyRate category user',
       populate: [
-        { path: 'user', select: 'name' },
+        { path: 'user', select: 'name phone' },
         { path: 'category', select: 'name' },
       ],
     })
@@ -121,7 +125,7 @@ const sendList = async (res, filter, page, limit) => {
     total,
     page,
     pages: Math.ceil(total / limit),
-    bookings,
+    bookings: bookings.map((b) => maskContacts(b, viewer)),
   });
 };
 
@@ -131,7 +135,7 @@ const sendList = async (res, filter, page, limit) => {
 const getMyBookings = asyncHandler(async (req, res) => {
   const { page, limit, filter } = buildListOptions(req.query);
   filter.customer = req.user._id;
-  await sendList(res, filter, page, limit);
+  await sendList(res, filter, page, limit,req.user);
 });
 
 // @desc    Bookings for my provider profile
@@ -148,7 +152,7 @@ const getProviderBookings = asyncHandler(async (req, res) => {
   filter.provider = profile._id;
   const total = await Booking.countDocuments(filter);
   const bookings = await Booking.find(filter)
-    .populate('customer', 'name')
+    .populate('customer', 'name phone')
     .sort({ date: -1, startTime: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -160,7 +164,7 @@ const getProviderBookings = asyncHandler(async (req, res) => {
 
   const withPayment = bookings.map((b) => {
     const p = byBooking.get(b._id.toString());
-    return { ...b, payment: p ? { method: p.method, status: p.status } : null };
+    return { ...maskContacts(b, req.user), payment: p ? { method: p.method, status: p.status } : null };
   });
 
   res.status(200).json({
@@ -181,12 +185,12 @@ const getBookingById = asyncHandler(async (req, res) => {
   }
 
   const booking = await Booking.findById(req.params.id)
-    .populate('customer', 'name')
+    .populate('customer', 'name phone')
     .populate({
       path: 'provider',
       select: 'city hourlyRate category user',
       populate: [
-        { path: 'user', select: 'name' },
+        { path: 'user', select: 'name phone' },
         { path: 'category', select: 'name' },
       ],
     });
@@ -203,8 +207,7 @@ const getBookingById = asyncHandler(async (req, res) => {
     throw new AppError('Booking not found', 404);
   }
 
-  res.status(200).json({ success: true, booking });
-});
+  res.status(200).json({ success: true, booking: maskContacts(booking, req.user) });});
 
 const TRANSITIONS = {
   pending: { confirmed: ['provider'], rejected: ['provider'], cancelled: ['customer', 'provider'] },
@@ -243,6 +246,9 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   }
   if (!allowedActors.includes(actor)) {
     throw new AppError(`A ${actor} cannot set this booking to ${status}`, 403);
+  }
+    if (status === 'confirmed' && !req.user.phone) {
+    throw new AppError('Please add your phone number in Settings before confirming', 400);
   }
 
   booking.status = status;

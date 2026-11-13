@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ContactForm from "../components/ContactForm";
 import {
   AlertCircle,
   CalendarClock,
@@ -158,6 +159,7 @@ function Settings() {
 
         {/* Security */}
         <div className="space-y-6 lg:col-span-2">
+          <ContactForm/>
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
